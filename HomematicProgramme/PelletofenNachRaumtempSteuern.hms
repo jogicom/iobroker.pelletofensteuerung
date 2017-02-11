@@ -1,0 +1,47 @@
+! Steuer den Pelletsofen anhand der Temperatur des Wandreglers im Wand-Wohnzimmer-TempSensor
+! Verwendete Systemvariable
+! PelletsTempHigh = Wird dieser Wert erreicht oder überschritten, wird der Aktor AUS geschaltet
+! PelletsTempLow  = Wird dieser Wert unterschritten, wird der Aktor EIN geschaltet
+! Dieses Script sollte nur bei Temperaturprüfungen aufgerufen werden, wenn die Pelletsheizung aktiv ist
+
+!Datenpunkt des Wohnzimmer Wandthermometer holen
+var myChannel = dom.GetObject("Wand-Wohnzimmer-TempSensor");
+var dp = myChannel.DPByHssDP("TEMPERATURE");
+
+!Aktuelle Temperatur holen
+real istTemp = dp.Value();
+
+!Datenpunkt des Schaltaktors holen
+myChannel = dom.GetObject("Pelletsofen-Aktor");
+dp = myChannel.DPByHssDP("STATE");
+
+! Pruefen, ob Temperaturvorgabe HIGH erreicht oder ueberschritten wurde
+if ( istTemp >= dom.GetObject("PelletsTempHigh").Variable()) {
+  if (dp.Value() == true) {
+    !Aktor abschaltbefehl, nur wenn Aktor auch eingeschaltet
+    dp.State(0);
+    ! Ofenstatus-Pellets auf StartCooldown, sofern Status nicht CoolDown oder StartCooldown ist
+    if (dom.GetObject("Ofenstatus-Pellets").State() != 2) {
+      if (dom.GetObject("Ofenstatus-Pellets").State() != 1) {
+        dom.GetObject("Ofenstatus-Pellets").State(2);
+      }
+    }
+  }
+  quit;
+}
+
+!Pruefen, ob Temeraturvorgabe LOW erreicht oder unterschritten wurde
+if ( istTemp <= dom.GetObject("PelletsTempLow").Variable()) {
+  ! Mindesttemperatur wurde unterschritten oder erreicht, Aktor nur einschalten wenn Status = Standby (0)
+  if(dom.GetObject("Ofenstatus-Pellets").State() == 0) {
+    if (dp.Value() == false) {
+      !Aktor EIN Schalten, nur wenn ausgeschaltet
+      dp.State(1);
+      if (dom.GetObject("Ofenstatus-Pellets").State() != 3) {
+        !Ofenstatus-Pellets auf Laeuft
+        dom.GetObject("Ofenstatus-Pellets").State(3);
+      }
+    }
+  }
+  quit;
+}
