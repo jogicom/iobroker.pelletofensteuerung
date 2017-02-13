@@ -21,9 +21,28 @@ So sehen die Verlaeufe aus bei Automatik Betrieb
 
 ------
 
-**Inhaltsverzeichnis**
+##Inhaltsverzeichnis
 
-[TOC]
+- [Benötigte Hard/Software](#Benötigte Hard/Software)
+- [Homematic einrichten](#Homematic einrichten)
+  - [Systemvariable einrichten](#Systemvariable einrichten)
+    - [PelletsTempLow](#Systemvariable PelletsTempLow einrichten)
+    - [PelletsTempHigh](#Systemvariable PelletsTempHigh einrichten)
+    - [OfenstatusPellets](#Systemvariable OfenstatusPellets einrichten)
+    - [Pelletsheizung](#Systemvariable Pelletsheizung einrichten)
+  - [Sensor fuer Raumtemperatur](#Sensor fuer Raumtemperatur)
+  - [Aktor zur Ofensteuerung](#Aktor zur Ofensteuerung)
+  - [Programme auf der Homematic](#Programme auf der Homematic)
+    - [Pelletsofen Safety Shutdown](#Pelletsofen Safety Shutdown)
+    - [Pelletsofen nach Heizstatus steuern](#Pelletsofen nach Heizstatus steuern)
+    - [Pelletsofen nach Raumtemperatur steuern](#Pelletsofen nach Raumtemperatur steuern)
+    - [Pelletsofen CoolDown starten](#Pelletsofen CoolDown starten)
+    - [Pelletsofen Fernbedienung](#Pelletsofen Fernbedienung (optional))
+- [IO-Broker einrichten](#IO-Broker einrichten)
+  - [ICAL Adapter einrichten](#ICAL Adapter einrichten)
+  - [Script installieren und anpassen](#Script installieren und anpassen)
+  - [Hinweise zum Script](#Hinweise zum Script)
+- [History](#History)
 
 ------
 
@@ -176,6 +195,7 @@ Als letzen Schritt den JavaScript Adapter installieren, falls noch nicht install
 - Pruefe zuerst, ob IO-Broker die States PelletsTempHigh und PelletsTempLow schon angelegt hat, falls nicht, starte die Homematic-Adapter neu, damit die States beim ersten Start vorhanden sind, sonst hagelts Fehler im Log
 - Fuege das Script `PelletsOfenSteuern.js` im javascript Adapter per Copy&Paste ein, bei Bedarf passe die entsprechenden Konstanten im script an
 - Script starten, fertig
+
 ### Hinweise zum Script
 
 Ist das Script gestartet, wird ein `string State Heizung.Wohnzimmer.Pelletsofen.pelletsTimer` angelegt, dort wird die aktuelle Schaltzeittabelle mit den Temperatur-Modes als JSON abgelegt und von dort aus wird sie beim Start des Java Script in das entsprechende TimerObjekt kopiert, so dass die Tabelle auch nach einem Neustart des Systems vorhanden ist.
@@ -186,8 +206,14 @@ In einer spaeteren Version soll per VIS die Schaltzeittabelle eingestellt werden
 
 # History
 
-**Version 0.0.1**
+**0.0.2 (2017-02-13)**
+- (jogicom)
+  - Doku berichtigt (fehlerhaftes Bild Ereignisse iCal)
+  - Doku Inhaltsverzeichnis integriert
+  - Default Schaltzeittabelle korrigiert
 
-Initial Release, getestet auf CCU2
+
+**0.0.1 (2017-02-10)**
+- (jogicom) Initial Release, getestet auf CCU2
 
 ------

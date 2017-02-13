@@ -241,7 +241,7 @@ function pelletsTimerInit() {
             {   "name":   "Montag",
                 "number": 1,
                 "point": [  {"h":  0, m:  0, "mode": PELLETS_TEMP_OFF      },
-                            {"h":  0, m: 45, "mode": PELLETS_TEMP_HIGH     },
+                            {"h":  5, m: 45, "mode": PELLETS_TEMP_HIGH     },
                             {"h":  9, m: 30, "mode": PELLETS_TEMP_MIDDLE   },
                             {"h": 13, m:  0, "mode": PELLETS_TEMP_HIGH     },
                             {"h": 21, m: 30, "mode": PELLETS_TEMP_END      },
