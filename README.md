@@ -23,7 +23,7 @@ So sehen die Verlaeufe aus bei Automatik Betrieb
 
 ##Inhaltsverzeichnis
 
-- [Benötigte Hard/Software](#benötigte-hard/software)
+- [Benoetigte Hard/Software](#benoetigte-hard/software)
 - [Homematic einrichten](#homematic-einrichten)
   - [Systemvariable einrichten](#systemvariable-einrichten)
     - [PelletsTempLow](#systemvariable-pelletstemplow-einrichten)
@@ -46,7 +46,7 @@ So sehen die Verlaeufe aus bei Automatik Betrieb
 
 ------
 
-## Benötigte Hard/Software
+## Benoetigte Hard/Software
 
 - Homematic CCU (auf CCU2 getestet)
 - IO-Broker mit ...
