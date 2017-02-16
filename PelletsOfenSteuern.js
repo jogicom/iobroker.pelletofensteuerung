@@ -20,7 +20,7 @@ const PELLETS_TEMP_OFF      = "OFF";
 const PELLETS_TEMP_MIDDLE   = "MIDDLE";
 const PELLETS_TEMP_HIGH     = "HIGH";
 const PELLETS_TEMP_END      = "END";
-const PELLETS_TEMP_UNKNOWN  = "UNKNOWN";
+const PELLETS_TEMP_NOT_FOUND= "NOT_FOUND";
 
 /* ******************************************************
 Default Werte fuer Temperaturen der Pelletsofensteuerung,
@@ -65,15 +65,36 @@ var hmStatePelletsTempHigh = getIdByName("PelletsTempHigh");
 var hmStatePelletsTempLow  = getIdByName("PelletsTempLow")
 
 
-var pelletsTimer = null;                  // Timertabelle (Objekt) fuer Pelletsofen Schaltzeiten
-var bOverride = false;                    // true, wenn Kalender steuert
-var sOverrideMode = PELLETS_TEMP_UNKNOWN; // Temperaturprofil bei Kalendersteuerung
+var timerTable = null;                          // Timertabelle (Objekt) fuer Pelletsofen Schaltzeiten
+var nextSchedule;
+var bICALoverride  = false;      // true, wenn Kalendersteuerung aktiv
 
+// Benoetigte States initalisieren, sofern noch nicht vorhanden
+log("Pellets Timer in Startphase", 'info');
+stateCreate();
 
-stateCreate(); // Benoetigte States initalisieren, sofern noch nicht vorhanden
+setTimeout (mainStart, 10000); // Wait for states if new
 
-// alle 15 Minuten pruefen ob durch Schaltzeittabelle aenderungen erforderlich sind
-schedule("1,16,31,46 * * * *", function() {setCurrentTemp();});
+/* Wird nur beim Start des Scriptes ausgeführt*/
+function mainStart(){
+    log("Pellets Timer gestartet", 'info');
+    timeTableInit();        // Schaltzeittabelle initalisieren
+    setCalendarControl();   // Check ob Events des Kalenders aktiv
+    mainSchedule();         // ersten Schedule anstossen
+}
+
+/* Wird bei jedem Schedule erneut ausgefuehrt*/
+function mainSchedule() {
+  var o;
+  //log("Schedule is called from timerTable", 'info');
+  if(nextSchedule) clearSchedule(nextSchedule);
+  o=scanTable(timerTable);
+  if(!bICALoverride){
+    setTempToHomematic(o.tempMode);
+  }
+  nextSchedule = schedule(o.nextSchedule ,mainSchedule);
+  //log("nextSchedule = '" + o.nextSchedule + "'");
+}
 
 // Events bei Kalendersteuerung von ical Adapter
 on ({id: STATE_ICAL_PELLETS_HIGH,   change: "ne" }, setCalendarControl);
@@ -84,7 +105,7 @@ on ({id: STATE_ICAL_PELLETS_OFF,    change: "ne" }, setCalendarControl);
 /* Events der Kalendersteuerung verarbeiten*/
 function setCalendarControl() {
   var flag = false;                 // Ist true, wenn Schaltzeiten Override von Kalender
-  var ov = PELLETS_TEMP_UNKNOWN;    // Enthaelt das Temperaturprofil bei Kalendersteuerung
+  var ov = PELLETS_TEMP_NOT_FOUND;    // Enthaelt das Temperaturprofil bei Kalendersteuerung
 
   if(getState(STATE_ICAL_PELLETS_OFF).val === true) {
     // Kalender steuert auf OFF (Prio 1)
@@ -106,75 +127,51 @@ function setCalendarControl() {
 
   // Flags fuer Override und Temperatur Profil setzen
   if(flag === true) {
-    sOverrideMode = ov;
-    bOverride = true;
-    log("Pellets Temperatursteuerung vom Kalender! Modus: " + sOverrideMode, 'info');
+    log("Pellets Temperatursteuerung vom Kalender aktiv! Modus: " + sOverrideMode, 'info');
+    setTempToHomematic(ov);
   } else {
-    bOverride = false;
-    log("Pellets Temperatursteuerung ueber Schaltzeittabelle aktiv!", 'info');
+    log("Pellets Temperatursteuerung Schaltzeittabelle aktiv!", 'info');
+    setTempToHomematic(scanTable(timerTable).tempMode);
   }
-
-  setCurrentTemp();     // Temperaturprofil in der Homematic setzen
-
+  bICALoverride = flag;
 }
 
-function setCurrentTemp() {
-    /* Den zur Zeit gueltigen Modus aus der Timertabelle holen und die
-    Temperaturen in die Homematic speichern oder das Temperaturprofil
-    der Kalendersteuerung verwenden, wenn override aktiv*/
-    var today = new Date();             // Aktuelles Datum
-    var weekday = today.getDay();       // Aktueller Wochentag
-    var tnow = 0;                       // Aktuelle Zeit in einfachem Zahlenformat
-    var ttest = 0;                      // Testzeit fuer vergleiche
-    var ap = 0;                         // Anzahl der vorhandenen Schaltzeiten
-    var foundIDX = null;                // Wenn ein Schaltzeitraum gefunden wurde dessen index
 
+/* scan der uebergebenen Timer Tabelle
+IN:   Timertabelle
+RET:  Objekt.tempMode = Gefundener Temperaturmode
+      Objekt.nextSchedule = Zeitpunkt des naechsten Schedule*/
+function scanTable(timerTable) {
+  var today = new Date();             // Aktuelles Datum
+  var weekday = today.getDay();       // Aktueller Wochentag
+  var tnow = 0;                       // Aktuelle Zeit in einfachem Zahlenformat
+  var ap = 0;                         // Anzahl der vorhandenen Schaltzeiten
+  var foundIDX = null;                // Wenn ein Schaltzeitraum gefunden wurde dessen index
+  // Object fuer Rueckgabe
+  var result = {
+    "tempMode": PELLETS_TEMP_NOT_FOUND , "nextSchedule": "0 0 * * *"};
 
-    /* Pellets Timer Objekt bei Bedarf erstellen*/
-    if ( pelletsTimer === null) {
-        /* Das Pellets Timerobjekt ist noch nicht initalisiert,
-        dieser Zustand tritt ein, wenn das Script neu gestartet wurde */
-        if(getState(STATE_PELLETS_TIMER).val === "noData") {
-            /* Der State mit dem JSON OBjekt ist leer dies tritt ein, wenn
-            der state fuer das JSON Objekt neu erstellt wurde
-            dann muss das Timer Objekt neu initalisiert werden und dann die Daten
-            in den State geschrieben werden, von dort kann dann bei einem Neustart
-            des Scripts die Schaltzeittabelle in das Timer Objekt eingelesen werden*/
-            pelletsTimerInit(); // State und Objekt initalisieren
-        } else {
-            // State mit JSON Daten ist vorhanden, dann daraus das Timer Objekt erstellen
-            pelletsTimer = JSON.parse(getState(STATE_PELLETS_TIMER).val ,(key, value) => {return value;});
-            log("setCurrentTemp: Pellets Timertabelle wurde von State in Objekt *pelletsTimer* geladen", 'info');
+  tnow = today.getHours() * 100 + today.getMinutes(); //Aktuelle Zeit in einfaches Zahlenformat umrechnen
+  ap = timerTable.day[weekday].point.length;          // Anzahl der vorhandenen Schaltzeitpunke
+  // Passenden Zeitabschnitt suchen (Tabelle rueckwaerts durchsuchen)
+  for (r=ap-1; r >= 0 ; r--) {
+      if ( timerTable.day[weekday].point[r].h *100 + timerTable.day[weekday].point[r].m <= tnow) {
+          foundIDX = r;
+          break;
+      }
+  }
+
+  // Wenn passender Zeitabschnitt gefunden
+  if(foundIDX !== null) {
+      if (foundIDX < ap) {
+        result.tempMode = timerTable.day[weekday].point[foundIDX].mode;
+        if (foundIDX < ap-1){
+          // Naechsten Schedule vorbereiten
+          result.nextSchedule = timerTable.day[weekday].point[foundIDX +1].m + " " + timerTable.day[weekday].point[foundIDX +1].h +" * * *";
         }
-    }
-
-    // Wenn Override aktiv, das Temperaturprofil des Kalenders uebernehmen
-    if (bOverride) {setTempToHomematic(sOverrideMode); return;}
-
-    tnow = today.getHours() * 100 + today.getMinutes(); //Aktuelle Zeit in einfaches Zahlenformat umrechnen
-    ap = pelletsTimer.day[weekday].point.length;  // Anzahl der vorhandenen Schaltzeitpunke
-    for (r=ap-1; r >= 0 ; r--) {
-        ttest = pelletsTimer.day[weekday].point[r].h *100 + pelletsTimer.day[weekday].point[r].m;
-        if ( ttest <= tnow) {
-            foundIDX = r;
-            break;
-        }
-    }
-
-    if(foundIDX !== null) {
-        // Es wurde ein passender Zeitabschnitt gefunden
-        if (foundIDX < ap) {
-            setTempToHomematic(pelletsTimer.day[weekday].point[r].mode);
-        } else {
-            log("Fehlerhafte Schaltzeittabelle!", 'error');
-        }
-    } else {
-        //Kein passender Zeitabschnitt gefunden
-        log("setCurrentTemp: Kein Zeitabschnitt in Temperaturtabelle fuer'"
-        + pelletsTimer.day[weekday].point[ap].name
-        + " Uhrzeit " + tnow
-        + " gefunden!", 'warn');
-    }
+      }
+  }
+  return result;
 }
 
 /* Schreibt die Temperaturdaten in die Homematic, anhand des uebergebenen Modus*/
@@ -226,11 +223,11 @@ function setTempToHomematic(smode) {
 
 }
 
-function pelletsTimerInit() {
+function timeTableInit() {
     /* Standard Heiztabelle fuer Pelletsofen generieren und in State speichern*/
-    pelletsTimer = {
+    timerTable = {
         "day": [
-               {   "name":   "Sonntag",
+            {   "name":   "Sonntag",
                 "number": 0,
                 "point": [  {"h":  0, m:  0, "mode": PELLETS_TEMP_OFF      },
                             {"h":  7, m: 30, "mode": PELLETS_TEMP_HIGH     },
@@ -295,8 +292,24 @@ function pelletsTimerInit() {
 
         ]
     };
-    setState(STATE_PELLETS_TIMER, JSON.stringify(pelletsTimer,(key, value) => {return value;},2));
-    log("pelletsTimerInit: Pellets Timer Tabelle wurde initalisiert und wurde zurueck gesetzt", 'warn');
+
+    if(getState(STATE_PELLETS_TIMER).val === "noData") {
+        /* Der State mit dem JSON OBjekt ist leer dies tritt ein, wenn
+        der state fuer das JSON Objekt neu erstellt wurde
+        dann muss das Timer Objekt neu initalisiert werden und dann die Daten
+        in den State geschrieben werden, von dort kann dann bei einem Neustart
+        des Scripts die Schaltzeittabelle in das Timer Objekt eingelesen werden*/
+        //pelletsTimerInit(); // State und Objekt initalisieren
+        setState(STATE_PELLETS_TIMER, JSON.stringify(timerTable,(key, value) => {return value;},2));
+        log("TimeTableInit: Schaltzeittabelle wurde wurde zurueck gesetzt", 'warn');
+    } else {
+        // State mit JSON Daten ist vorhanden, dann daraus das Timer Objekt erstellen
+         timerTable = JSON.parse(getState(STATE_PELLETS_TIMER).val ,(key, value) => {return value;});
+        log("TimeTableInit: Timertabelle wurde aus der Datenbank geladen", 'info');
+    }
+
+
+
 }
 
 function stateCreate() {

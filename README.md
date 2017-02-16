@@ -206,6 +206,11 @@ In einer spaeteren Version soll per VIS die Schaltzeittabelle eingestellt werden
 
 # History
 
+**0.0.3 (2017-02-17)**
+- (jogicom)
+  - Schaltzeiten werden jetzt Minuten genau gesteuert
+  - Script wird nicht mehr regelmaessig gestartet sondern nur zu Zeitpunkten wo sich was aendert
+
 **0.0.2 (2017-02-13)**
 - (jogicom)
   - Doku berichtigt (fehlerhaftes Bild Ereignisse iCal)
