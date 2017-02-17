@@ -127,7 +127,7 @@ function setCalendarControl() {
 
   // Flags fuer Override und Temperatur Profil setzen
   if(flag === true) {
-    log("Pellets Temperatursteuerung vom Kalender aktiv! Modus: " + sOverrideMode, 'info');
+    log("Pellets Temperatursteuerung vom Kalender aktiv! Mode: " + ov, 'info');
     setTempToHomematic(ov);
   } else {
     log("Pellets Temperatursteuerung Schaltzeittabelle aktiv!", 'info');
