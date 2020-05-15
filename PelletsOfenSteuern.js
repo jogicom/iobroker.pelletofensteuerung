@@ -1,4 +1,4 @@
-/* Beschreibung: V0.0.1
+/* Beschreibung: V0.0.4
 Steuerung des Pelletsofen im Wohnzimmer nach einer Schaltzeittabelle die
 in einem state im JSON Format abgespeichert ist
 Die Schaltzeiten koennen durch den ical-Adapter ueberschrieben werden, wenn
@@ -7,10 +7,13 @@ PelletsOFF      = Temperaturprofil OFF
 PelletsHIGH     = Temperaturprofil HIGH
 PelletsMIDDLE   = Temperaturprofil MIDDLE
 PelletsEND      = Temperaturprofil END
+PelletsManu     = Temperaturprofil MANU
 
 die einzelnen Temperaturprofile sind jeweils in einem State fuer HIG/LOW gespeichert
 
 Aufloesungsgenauigkeit der Schaltzeitensind 15 Minuten
+
+Umstellung Sommer/Winterbetrieb über Flag 'javascript.0.Heizung.Wohnzimmer.Pelletsofen.Season'
 */
 
 /* ******************************************************
@@ -20,6 +23,7 @@ const PELLETS_TEMP_OFF      = "OFF";
 const PELLETS_TEMP_MIDDLE   = "MIDDLE";
 const PELLETS_TEMP_HIGH     = "HIGH";
 const PELLETS_TEMP_END      = "END";
+const PELLETS_TEMP_MANU     = "MANU";
 const PELLETS_TEMP_NOT_FOUND= "NOT_FOUND";
 
 /* ******************************************************
@@ -35,6 +39,8 @@ const PELLETS_OFF_HIGH_TEMP     = 10.0;
 const PELLETS_OFF_LOW_TEMP      =  5.0;
 const PELLETS_MIDDLE_HIGH_TEMP  = 23.1;
 const PELLETS_MIDDLE_LOW_TEMP   = 21.1;
+const PELLETS_MANU_HIGH_TEMP    = 24.5;
+const PELLETS_MANU_LOW_TEMP     =  5.0;
 
 /* Verwendete States zuweisen (ioBroker)*/
 const STATE_PELLETS_TIMER       = 'Heizung.Wohnzimmer.Pelletsofen.pelletsTimer' ;
@@ -46,12 +52,16 @@ const STATE_DEF_END_HIGH_TEMP   = 'Heizung.Wohnzimmer.Pelletsofen.defPelletsEndH
 const STATE_DEF_END_LOW_TEMP    = 'Heizung.Wohnzimmer.Pelletsofen.defPelletsEndLowTemp';
 const STATE_DEF_MIDDLE_HIGH_TEMP= 'Heizung.Wohnzimmer.Pelletsofen.defPelletsMiddleHighTemp';
 const STATE_DEF_MIDDLE_LOW_TEMP = 'Heizung.Wohnzimmer.Pelletsofen.defPelletsMiddleLowTemp';
+const STATE_DEF_MANU_HIGH_TEMP  = 'Heizung.Wohnzimmer.Pelletsofen.defPelletsManuHighTemp';
+const STATE_DEF_MANU_LOW_TEMP   = 'Heizung.Wohnzimmer.Pelletsofen.defPelletsManuLowTemp';
 /* States des ical Adapters */
-const STATE_ICAL_PELLETS_OFF    = 'ical.0.events.PelletsOFF';
-const STATE_ICAL_PELLETS_HIGH   = 'ical.0.events.PelletsHIGH';
-const STATE_ICAL_PELLETS_MIDDLE = 'ical.0.events.PelletsMIDDLE';
-const STATE_ICAL_PELLETS_END    = 'ical.0.events.PelletsEND';
+const STATE_ICAL_PELLETS_OFF    = 'ical.0.events.0.now.PelletsOFF';
+const STATE_ICAL_PELLETS_HIGH   = 'ical.0.events.0.now.PelletsHIGH';
+const STATE_ICAL_PELLETS_MIDDLE = 'ical.0.events.0.now.PelletsMIDDLE';
+const STATE_ICAL_PELLETS_END    = 'ical.0.events.0.now.PelletsEND';
+const STATE_ICAL_PELLETS_MANU   = 'ical.0.events.0.now.PelletsMANU';
 
+const STATE_SEASON              = 'javascript.0.Heizung.Wohnzimmer.Pelletsofen.Season';
 
 
 /* ********************** Hauptprogramm ******************* */
@@ -62,7 +72,7 @@ ersichtlich im Log wird dieser fehler als ERROR ausgegeben
 HMSTATE_PELLETS_TEMP_HIGH = 'hm-rega.0.xxxxx'
 HMSTATE_PELLETS_TEMP_LOW  = ''hm-rega.0.yyyy' */
 var hmStatePelletsTempHigh = getIdByName("PelletsTempHigh");
-var hmStatePelletsTempLow  = getIdByName("PelletsTempLow")
+var hmStatePelletsTempLow  = getIdByName("PelletsTempLow");
 
 
 var timerTable = null;                          // Timertabelle (Objekt) fuer Pelletsofen Schaltzeiten
@@ -101,7 +111,20 @@ on ({id: STATE_ICAL_PELLETS_HIGH,   change: "ne" }, setCalendarControl);
 on ({id: STATE_ICAL_PELLETS_MIDDLE, change: "ne" }, setCalendarControl);
 on ({id: STATE_ICAL_PELLETS_END,    change: "ne" }, setCalendarControl);
 on ({id: STATE_ICAL_PELLETS_OFF,    change: "ne" }, setCalendarControl);
+on ({id: STATE_ICAL_PELLETS_MANU,   change: "ne" }, setCalendarControl);
 
+on ({id: STATE_SEASON,   change: "ne" }, setSeason);
+
+// Heizprofil Sommer Winter umstellung
+function setSeason() {
+  // Tabelle immer löschen, dies ist ein Workaround wegen Sommer/Winterumstellung
+  // Evtl. später anders machen!!!
+  setState(STATE_PELLETS_TIMER, "noData");
+  setTimeout (timeTableInit, 1000);   // Timertabelle neu laden in 1000ms
+  // Nächsten Schedule berechnen und anstossen
+  if(nextSchedule) clearSchedule(nextSchedule);
+  setTimeout(mainSchedule, 2000);
+}
 /* Events der Kalendersteuerung verarbeiten*/
 function setCalendarControl() {
   var flag = false;                 // Ist true, wenn Schaltzeiten Override von Kalender
@@ -123,6 +146,11 @@ function setCalendarControl() {
     // Kalender steuert auf HIGH (Prio 4)
     ov = PELLETS_TEMP_HIGH;
     flag = true;
+  } else if(getState(STATE_ICAL_PELLETS_MANU).val === true) {
+    // Kalender steuert auf HIGH (Prio 4)
+    ov = PELLETS_TEMP_MANU;
+    flag = true;
+
   }
 
   // Flags fuer Override und Temperatur Profil setzen
@@ -196,6 +224,9 @@ function setTempToHomematic(smode) {
             tempHigh = getState(STATE_DEF_END_HIGH_TEMP).val;
             tempLow =  getState(STATE_DEF_END_LOW_TEMP).val;
             break;
+        case PELLETS_TEMP_MANU:
+            tempHigh = getState(STATE_DEF_MANU_HIGH_TEMP).val;
+            tempLow =  getState(STATE_DEF_MANU_LOW_TEMP).val;                break;
         default:
             log("Ungueltiger Temperaturmode: '" + smode + "' Temperatur wurde auf minimal gesetzt", 'error');
             tempHigh = getState(STATE_DEF_OFF_HIGH_TEMP).val;
@@ -225,7 +256,8 @@ function setTempToHomematic(smode) {
 
 function timeTableInit() {
     /* Standard Heiztabelle fuer Pelletsofen generieren und in State speichern*/
-    timerTable = {
+
+    var timerTableWinter = {
         "day": [
             {   "name":   "Sonntag",
                 "number": 0,
@@ -293,20 +325,98 @@ function timeTableInit() {
         ]
     };
 
-    if(getState(STATE_PELLETS_TIMER).val === "noData") {
-        /* Der State mit dem JSON OBjekt ist leer dies tritt ein, wenn
-        der state fuer das JSON Objekt neu erstellt wurde
-        dann muss das Timer Objekt neu initalisiert werden und dann die Daten
-        in den State geschrieben werden, von dort kann dann bei einem Neustart
-        des Scripts die Schaltzeittabelle in das Timer Objekt eingelesen werden*/
-        //pelletsTimerInit(); // State und Objekt initalisieren
-        setState(STATE_PELLETS_TIMER, JSON.stringify(timerTable,(key, value) => {return value;},2));
-        log("TimeTableInit: Schaltzeittabelle wurde wurde zurueck gesetzt", 'warn');
-    } else {
-        // State mit JSON Daten ist vorhanden, dann daraus das Timer Objekt erstellen
-         timerTable = JSON.parse(getState(STATE_PELLETS_TIMER).val ,(key, value) => {return value;});
-        log("TimeTableInit: Timertabelle wurde aus der Datenbank geladen", 'info');
-    }
+
+// TimeTable Sommer
+var timerTableSummer = {
+    "day": [
+        {   "name":   "Sonntag",
+            "number": 0,
+            "point": [  {"h":  0, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h":  7, m: 30, "mode": PELLETS_TEMP_HIGH     },
+                        {"h":  7, m: 45, "mode": PELLETS_TEMP_MANU  },
+                        {"h": 10, m:  0, "mode": PELLETS_TEMP_OFF     },
+                        {"h": 11, m:  0, "mode": PELLETS_TEMP_MANU      },
+                        {"h": 22, m: 30, "mode": PELLETS_TEMP_OFF      }   ]   },
+        {   "name":   "Montag",
+            "number": 1,
+            "point": [  {"h":  0, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h":  5, m: 45, "mode": PELLETS_TEMP_HIGH     },
+                        {"h":  6, m:  0, "mode": PELLETS_TEMP_MANU  },
+                        {"h":  9, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h": 11, m:  0, "mode": PELLETS_TEMP_MANU     },
+                        {"h": 22, m:  0, "mode": PELLETS_TEMP_OFF      }     ]   },
+
+        {   "name":   "Dienstag",
+            "number": 2,
+            "point": [  {"h":  0, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h":  5, m: 45, "mode": PELLETS_TEMP_HIGH     },
+                        {"h":  6, m:  0, "mode": PELLETS_TEMP_MANU  },
+                        {"h":  9, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h": 11, m:  0, "mode": PELLETS_TEMP_MANU     },
+                        {"h": 22, m:  0, "mode": PELLETS_TEMP_OFF      }   ]   },
+
+        {   "name":   "Mittwoch",
+            "number": 3,
+            "point": [  {"h":  0, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h":  5, m: 45, "mode": PELLETS_TEMP_HIGH     },
+                        {"h":  6, m:  0, "mode": PELLETS_TEMP_MANU  },
+                        {"h":  9, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h": 11, m:  0, "mode": PELLETS_TEMP_MANU     },
+                        {"h": 22, m:  0, "mode": PELLETS_TEMP_OFF      }   ]   },
+
+        {   "name":   "Donnerstag",
+            "number": 4,
+            "point": [  {"h":  0, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h":  5, m: 45, "mode": PELLETS_TEMP_HIGH     },
+                        {"h":  6, m:  0, "mode": PELLETS_TEMP_MANU  },
+                        {"h":  9, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h": 11, m:  0, "mode": PELLETS_TEMP_MANU     },
+                        {"h": 22, m:  0, "mode": PELLETS_TEMP_OFF      }   ]   },
+
+        {   "name":   "Freitag",
+            "number": 5,
+            "point": [  {"h":  0, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h":  5, m: 45, "mode": PELLETS_TEMP_HIGH     },
+                        {"h":  6, m:  0, "mode": PELLETS_TEMP_MANU  },
+                        {"h":  9, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h": 11, m:  0, "mode": PELLETS_TEMP_MANU     },
+                        {"h": 22, m: 30, "mode": PELLETS_TEMP_OFF      }   ]   },
+
+        {   "name":   "Samstag",
+            "number": 6,
+            "point": [  {"h":  0, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h":  7, m: 30, "mode": PELLETS_TEMP_HIGH     },
+                        {"h":  7, m: 45, "mode": PELLETS_TEMP_MANU  },
+                        {"h": 10, m:  0, "mode": PELLETS_TEMP_OFF      },
+                        {"h": 11, m:  0, "mode": PELLETS_TEMP_MANU     },
+                        {"h": 22, m: 30, "mode": PELLETS_TEMP_OFF      }   ]   }
+
+
+    ]
+};
+
+if(getState(STATE_SEASON).val === false) {
+  timerTable = timerTableSummer;
+  log("Pelletofen Wohnzimmer Timer Tabelle für Sommerbetrieb geladen");
+} else {
+  timerTable = timerTableWinter;
+  log("Pelletofen Wohnzimmer Timer Tabelle für Winterbetrieb geladen");
+}
+
+if(getState(STATE_PELLETS_TIMER).val === "noData") {
+    /* Der State mit dem JSON OBjekt ist leer dies tritt ein, wenn
+    der state fuer das JSON Objekt neu erstellt wurde
+    dann muss das Timer Objekt neu initalisiert werden und dann die Daten
+    in den State geschrieben werden, von dort kann dann bei einem Neustart
+    des Scripts die Schaltzeittabelle in das Timer Objekt eingelesen werden*/
+    //pelletsTimerInit(); // State und Objekt initalisieren
+    setState(STATE_PELLETS_TIMER, JSON.stringify(timerTable,(key, value) => {return value;},2));
+    log("TimeTableInit: Schaltzeittabelle wurde wurde zurueck gesetzt", 'warn');
+} else {
+    // State mit JSON Daten ist vorhanden, dann daraus das Timer Objekt erstellen
+    timerTable = JSON.parse(getState(STATE_PELLETS_TIMER).val ,(key, value) => {return value;});
+    log("TimeTableInit: Timertabelle wurde aus der Datenbank geladen", 'info');
+}
 
 
 
@@ -322,6 +432,15 @@ function stateCreate() {
         read:   true,
         write:  true,
         def:    "noData"
+    });
+
+    createState(STATE_SEASON, {
+        name:   'Jahreszeit Sommer oder Winter',
+        type:   'boolean',
+        read:   true,
+        write:  true,
+        def:    false,
+        states: "false:Sommerbetrieb; true:Winterbetrieb"
     });
 
     /* *******************************************************************
@@ -430,6 +549,32 @@ function stateCreate() {
         min:     0.0,
         max:    40.0,
         def:    PELLETS_MIDDLE_LOW_TEMP,
+        unit:   "°C",
+        role:   "value.temperature"
+    });
+
+    createState(STATE_DEF_MANU_HIGH_TEMP, {
+        name:   'Default Temperatur, bei der der Ofen im MANU Betrieb abgeschaltet wird',
+        desc:   'Wird zur Steuerung laufend angepasst',
+        type:   'number',
+        read:   true,
+        write:  true,
+        min:     0.0,
+        max:    40.0,
+        def:    PELLETS_MANU_HIGH_TEMP,
+        unit:   "°C",
+        role:   "value.temperature"
+    });
+
+    createState(STATE_DEF_MANU_LOW_TEMP, {
+        name:   'Default Temperatur, bei der der Pelletsofen im MANU Betrieb eingeschaltet wird',
+        desc:   'Wird zur Steuerung laufend angepasst',
+        type:   'number',
+        read:   true,
+        write:  true,
+        min:     0.0,
+        max:    40.0,
+        def:    PELLETS_MANU_LOW_TEMP,
         unit:   "°C",
         role:   "value.temperature"
     });

@@ -4,8 +4,10 @@
 ! PelletsTempLow  = Wird dieser Wert unterschritten, wird der Aktor EIN geschaltet
 ! Dieses Script sollte nur bei Temperaturprüfungen aufgerufen werden, wenn die Pelletsheizung aktiv ist
 
+!V0.01 Fehler im Namen des Temperatursensors behoben
+
 !Datenpunkt des Wohnzimmer Wandthermometer holen
-var myChannel = dom.GetObject("Wand-Wohnzimmer-TempSensor");
+var myChannel = dom.GetObject("Wand-Wohnzimmer-Sensor");
 var dp = myChannel.DPByHssDP("TEMPERATURE");
 
 !Aktuelle Temperatur holen

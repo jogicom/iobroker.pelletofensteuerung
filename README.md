@@ -206,6 +206,13 @@ In einer spaeteren Version soll per VIS die Schaltzeittabelle eingestellt werden
 
 # History
 
+**0.0.4 (2020-05-12)**
+- (jogicom)
+  - Fehlerbereinigung im Homematic Script
+  - Winter/Sommerzeittabelle integriert
+  - Neuer State Heizung.Wohnzimmer.Pelletsofen.Season, zum umschalten der Heizzeiten
+  - Kleinere Fehlerbereinigung, ical-Adapter benutzt andere States nach Update
+
 **0.0.3 (2017-02-17)**
 - (jogicom)
   - Schaltzeiten werden jetzt Minuten genau gesteuert
