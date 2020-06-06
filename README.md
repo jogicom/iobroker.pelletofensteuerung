@@ -131,19 +131,19 @@ Wird die maximal vorgegebene Raumtemperatur ueberschritten, passiert folgendes:
 
 **<u>Wichtig!</u>** Das Programm wird bei Aktualisierung der Temperatur jedes mal ausgelöst, dies ist beabsichtigt!
 
-Das Programm findest du im Ordner `HomematicProgramme` unter `PelletsofenSafeteyShutdown.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenSafeteyShutdown.PDF)
+Das Programm findest du im Ordner `HomematicProgramme` unter `PelletsofenSafeteyShutdown.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenSafeteyShutdown.pdf)
 
 #### Pelletsofen nach Heizstatus steuern
 
 Hier werden die verschiedenen Stadien des Heizstatus verarbeiten und auf das schalten des Aktors reagiert, am besten 1zu1 uebernehmen, da die Steuerung sonst nicht korrekt funktioniert
 
-Das Programm findest du im Ordner `HomematicProgramme` unter `PelletsofenNachHeizstatusSteuern.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenNachHeizstatusSteuern.PDF)
+Das Programm findest du im Ordner `HomematicProgramme` unter `PelletsofenNachHeizstatusSteuern.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenNachHeizstatusSteuern.pdf)
 
 #### Pelletsofen nach Raumtemperatur steuern
 
 Hier wird der Pelletsofen nach dem jeweiligen Status und der Raumtemperatur gesteuert. Auch hier ist extrem wichtig, dass das Programm bei **Aktualisierung** ausgeführt wird! Die eigentliche Arbeit, wird von dem folgenden Script erledigt. Solltest du irgendwelche Geräte Namen anders verwenden, musst du das Script sehr genau anpassen, damit es wirklich durchlaeuft.
 
-Das Programm findest du im Ordner `HomematicProgramme` unter `PelletsofenNachRaumtempSteuern.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenNachRaumtempSteuern.PDF)
+Das Programm findest du im Ordner `HomematicProgramme` unter `PelletsofenNachRaumtempSteuern.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenNachRaumtempSteuern.pdf)
 
 Das Script findest du im Ordner `HomematicProgramme` unter `PelletsofenNachRaumtempSteuern.hms` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletofenNachRaumtempSteuern.hms)
 
@@ -151,7 +151,7 @@ Das Script findest du im Ordner `HomematicProgramme` unter `PelletsofenNachRaumt
 
 Hier wird der CoolDown des Pelletsofen fuer 90 Minuten aktiviert und damit das toggeln bei sehr starken Temperaturschwankungen verhindert.
 
-Das Programm findest du im Ordner `HomematicProgramme` unter `PelletsofenCoolDownStarten.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenCoolDownStarten.PDF)
+Das Programm findest du im Ordner `HomematicProgramme` unter `PelletsofenCoolDownStarten.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenCoolDownStarten.pdf)
 
 #### Pelletsofen Fernbedienung (optional)
 
@@ -159,7 +159,7 @@ Da so eine Automatik zwar recht und gut ist, man aber ab und zu auch mal haendis
 
 Die Aenderung wird auch ueber einen MP3 Lautsprecher angesagt, diesen Teil koennt ihr weglassen, das wuerde jetzt den Rahmen sprengen.
 
-Das Programm findest du im Ordner  `HomematicProgramme` unter `PelletsofenFernbedienung.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenFernbedienung.PDF)
+Das Programm findest du im Ordner  `HomematicProgramme` unter `PelletsofenFernbedienung.PNG` oder als direkten [Link hier bei GitHub.](https://github.com/jogicom/iobroker.pelletofensteuerung/blob/master/HomematicProgramme/PelletsofenFernbedienung.pdf)
 
 | Taste | Ofenstatus            | Aktion                                   |
 | ----- | --------------------- | ---------------------------------------- |
